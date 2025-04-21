@@ -30,7 +30,7 @@ jobs:
 
       - name: Upload logs (optional)
         if: always()
-        uses: actions/upload-artifact@v3.0.0 # Explicitly specifying the version
+        uses: actions/upload-artifact@v2 # Switching to v2 for stability
         with:
           name: job-scrape-logs
           path: cron/latest_log.txt

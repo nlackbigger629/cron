@@ -1,8 +1,8 @@
 name: LinkedIn Job Scraper
 on:
+  workflow_dispatch: # Manual trigger only
   schedule:
-    - cron: '*/5 * * * *' # Every 5 minutes
-  workflow_dispatch: # Allow manual trigger
+    - cron: '0 */6 * * *' # Every 6 hours (at minute 0)
 
 jobs:
   scrape-jobs:
@@ -15,22 +15,48 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm' # This caches your npm dependencies
+      
+      # Install dependencies only if package.json has changed
+      - name: Check for package changes
+        id: package-check
+        run: |
+          if [ -f .package-hash ]; then
+            OLD_HASH=$(cat .package-hash)
+            NEW_HASH=$(md5sum package.json | awk '{ print $1 }')
+            if [ "$OLD_HASH" != "$NEW_HASH" ]; then
+              echo "changes=true" >> $GITHUB_OUTPUT
+              echo $NEW_HASH > .package-hash
+            else
+              echo "changes=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            md5sum package.json | awk '{ print $1 }' > .package-hash
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
       
       - name: Install Chromium
         run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser
+          if ! command -v chromium-browser &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y chromium-browser
+          fi
       
       - name: Install dependencies
+        if: steps.package-check.outputs.changes == 'true'
         run: npm install
       
       - name: Run puppeteer script
         run: node index.js
       
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "time=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+      
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: job-scrape-logs-$(date +%Y%m%d%H%M%S)
+          name: job-scrape-logs-${{ steps.timestamp.outputs.time }}
           path: latest_log.txt
           retention-days: 7

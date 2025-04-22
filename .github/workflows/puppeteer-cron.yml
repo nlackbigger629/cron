@@ -1,13 +1,14 @@
-name: Run Puppeteer Script Every 5 Minutes
+name: LinkedIn Job Scraper
 on:
   schedule:
     - cron: '*/5 * * * *' # Every 5 minutes
   workflow_dispatch: # Allow manual trigger
+
 jobs:
-  run-script:
+  scrape-jobs:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
       
       - name: Set up Node.js
@@ -23,12 +24,13 @@ jobs:
       - name: Install dependencies
         run: npm install
       
-      - name: Run script
+      - name: Run puppeteer script
         run: node index.js
       
-      - name: Upload logs (optional)
+      - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: job-scrape-logs
+          name: job-scrape-logs-$(date +%Y%m%d%H%M%S)
           path: latest_log.txt
+          retention-days: 7
